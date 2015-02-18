@@ -1,0 +1,4 @@
+Para converter o arquivo rmd para md:
+
+library(knitr)
+knit(Climate_event_impacts.Rmd)

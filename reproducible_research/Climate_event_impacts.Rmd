@@ -1,0 +1,210 @@
+---
+Title: "Climate event impacts"
+Synopsis: "This document report the 15 top causes of fatalities, injuries, property and crop damages during climate events in the United States. The data comes from NOAA storm database. The main goal is to identify the weather events that cause more damages to population health and economic impacts. The excessive heat is the most harmful event to population health while drought causes more impact in economy."  
+
+
+Author: "Marcus Vinícius"
+date: "Tuesday, February 17, 2015"
+output: html_document
+---
+
+#Climate event impacts  
+
+
+Synopsis: This document report the 15 top causes of fatalities, injuries, property and crop damages during climate events in the United States. The data comes from NOAA storm database. The main goal is to identify the weather events that cause more damages to population health and economic impacts. The tornados are the most harmful events to population health while flood causes more impact in economy.  
+
+
+Author: Marcus Vinícius  
+
+
+Date: Tuesday, February 17, 2015
+
+
+### Data Processing  
+
+
+##### Get the original data  
+
+
+The file must have been downloaded from "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2" and saved in R directory with the name "repdata-data-StormData.csv.bz2". The database will be stored in the "data" data frame.
+
+
+```{r, echo=TRUE}
+data<-read.csv("repdata-data-StormData.csv.bz2", header=TRUE, sep=",", na.strings=" ")
+```
+
+
+##### Subset the original data  
+
+
+The "data" data frame has 37 variables. Most of them are unnecessary, so I have subset to the following 16 variables:
+
+BGN_DATE, COUNTY, COUNTYNAME, STATE, EVTYPE, LENGTH, WIDTH, F, MAG, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP, REFNUM
+
+```{r, echo=TRUE}
+sub_data<-data[,c("BGN_DATE", "COUNTY", "COUNTYNAME", "STATE", "EVTYPE", "LENGTH", "WIDTH", "F", "MAG", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP", "REFNUM")]
+```
+
+
+##### Create new columns  
+
+
+The sub_data has the columns with the property and crops damages and also their respecting magnifying factor. The magnifying factor has the factors M for millions, B for billions and k for thousands. To obtain the total cost, the values of the property and crops damages must be multiplied by their respecting magnifying factor.
+
+```{r, echo=TRUE}
+sub_data$PROPDMGEXP<-as.character(sub_data$PROPDMGEXP)
+sub_data$PROPDMGEXP[grep("K", sub_data$PROPDMGEXP)] <- "1000"
+sub_data$PROPDMGEXP[grep("M", sub_data$PROPDMGEXP)]<-"1000000"
+sub_data$PROPDMGEXP[grep("m", sub_data$PROPDMGEXP)]<-"1000000"
+sub_data$PROPDMGEXP[grep("B", sub_data$PROPDMGEXP)]<-"1000000000"
+othervalues<-!(sub_data$PROPDMGEXP %in% c("1000", "1000000", "1000000000")) == 1
+sub_data$PROPDMGEXP[othervalues==1]<-"1"
+sub_data$CROPDMGEXP<-as.character(sub_data$CROPDMGEXP)
+sub_data$CROPDMGEXP[grep("K", sub_data$CROPDMGEXP)] <- "1000"
+sub_data$CROPDMGEXP[grep("M", sub_data$CROPDMGEXP)] <- "1000000"
+sub_data$CROPDMGEXP[grep("B", sub_data$CROPDMGEXP)] <- "1000000000"
+othervalues<-!(sub_data$CROPDMGEXP %in% c("1000", "1000000", "1000000000")) == 1
+sub_data$CROPDMGEXP[othervalues==1]<-"1"
+sub_data$PROPDMG<-as.numeric(sub_data$PROPDMG)
+sub_data$PROPDMGEXP<-as.numeric(sub_data$PROPDMGEXP)
+sub_data$CROPDMG<-as.numeric(sub_data$CROPDMG)
+sub_data$CROPDMGEXP<-as.numeric(sub_data$CROPDMGEXP)
+sub_data$property<-sub_data$PROPDMG * sub_data$PROPDMGEXP
+sub_data$crop<- sub_data$CROPDMG * sub_data$CROPDMGEXP
+```
+
+
+##### Create the population health and monetary damages variables  
+
+
+The total health and monetary damages are created and stored at the health and economic data frames, respectively.
+
+
+```{r, echo=TRUE}
+# population health
+sub_data$EVTYPE<-as.character(sub_data$EVTYPE)
+sub_data$FATALITIES<-as.numeric(sub_data$FATALITIES)
+sub_data$INJURIES<-as.numeric(sub_data$INJURIES)
+sub_data$EVTYPE<-as.character(sub_data$EVTYPE)
+fatalities<-aggregate(FATALITIES ~ EVTYPE, sub_data, sum)
+injuries<-aggregate(INJURIES ~ EVTYPE, sub_data, sum)
+sub_data$health<-sub_data$FATALITIES + sub_data$INJURIES
+health<-aggregate(health ~ EVTYPE, sub_data, sum)
+
+# Monetary damages (crop), property damages (PROPDMG)
+property<-aggregate(property ~ EVTYPE, sub_data, sum)
+crop<-aggregate(crop ~ EVTYPE, sub_data, sum)
+sub_data$economic<-sub_data$property + sub_data$crop
+economic<-aggregate(economic ~ EVTYPE, sub_data, sum)
+
+fatalities<-fatalities[!fatalities$FATALITIES == 0, ]
+injuries<-injuries[!injuries$INJURIES == 0, ]
+property<-property[!property$property == 0, ]
+crop<-crop[!crop$crop == 0, ]
+health<-health[!health$health == 0, ]
+economic<-economic[!economic$economic == 0, ]
+
+# Top 15 causes
+fatalities15<-head(fatalities[order(fatalities$FATALITIES, decreasing=T),],15)
+injuries15<-head(injuries[order(injuries$INJURIES, decreasing=T),],15)
+property15<-head(property[order(property$property, decreasing=T),],15)
+crop15<-head(crop[order(crop$crop, decreasing=T),],15)
+health15<-head(health[order(health$health, decreasing=T), ], 15)
+economic15<-head(economic[order(economic$economic, decreasing=T), ], 15)
+```
+
+
+### Results  
+
+
+##### Top 15 events  
+
+
+Top 15 events that causes more fatalities  
+
+
+```{r, echo=TRUE}
+fatalities15<-head(fatalities[order(fatalities$FATALITIES, decreasing=T),],15)
+options(scipen=999)
+print(fatalities15)
+```
+
+
+Top 15 events that causes more injuries  
+
+
+```{r, echo=TRUE}
+injuries15<-head(injuries[order(injuries$INJURIES, decreasing=T),],15)
+options(scipen=999)
+print(injuries15)
+```
+
+
+Top 15 events that causes more property damages  
+
+
+```{r, echo=TRUE}
+property15<-head(property[order(property$property, decreasing=T),],15)
+options(scipen=999)
+print(property15)
+```
+
+
+Top 15 events that causes more crop damages  
+
+
+```{r, echo=TRUE}
+crop15<-head(crop[order(crop$crop, decreasing=T),],15)
+options(scipen=999)
+print(crop15)
+```
+
+
+**Top 15 harmful events to population health**  
+
+
+The graph below shows that tornados causes more damages to population health.  
+
+
+
+```{r, echo=TRUE}
+health15<-head(health[order(health$health, decreasing=T), ], 15)
+options(scipen=999)
+print(health15)
+```
+
+
+```{r,echo=TRUE,fig.path='figures/plot1'}
+library(ggplot2)
+health_graph<-ggplot(health15, aes(x=EVTYPE, y=health))
+health_graph<-health_graph + geom_bar(stat="identity") + xlab("Event type") + ylab("Health damage") +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+        ggtitle("Health damage by event type. 1950 - nov/2011. TOP 15")
+print(health_graph)
+```
+
+
+**Top 15 events which have the greatest economic consequences** 
+
+
+The graphic below shows that flood causes the greatest economic consequences.
+
+
+
+```{r, echo=TRUE}
+economic15<-head(economic[order(economic$economic, decreasing=T), ], 15)
+options(scipen=999)
+print(economic15)
+```
+
+    
+
+
+```{r,echo=TRUE,fig.path='figures/plot2'}
+economic_graph<-ggplot(economic15, aes(x=EVTYPE, y=economic))
+economic_graph<-economic_graph + geom_bar(stat="identity") + xlab("Event type") + ylab("Economic damage") +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        ggtitle("Economic impacts by event type. 1950 - nov/2011. TOP 15")
+print(economic_graph)
+```
+
