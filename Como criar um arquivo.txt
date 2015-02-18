@@ -1,0 +1,4 @@
+no git bash digitar: touch nomearquivo.md
+
+puxar repositório da web: git clone endereçorepositório
+
